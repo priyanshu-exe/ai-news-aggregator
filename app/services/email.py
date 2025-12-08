@@ -10,9 +10,14 @@ load_dotenv()
 
 MY_EMAIL = os.getenv("MY_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
+SKIP_EMAIL = os.getenv("SKIP_EMAIL", "0").lower() in ("1", "true", "yes")
 
 
 def send_email(subject: str, body_text: str, body_html: str = None, recipients: list = None):
+    if SKIP_EMAIL:
+        # Skip actual SMTP send when SKIP_EMAIL is enabled (useful for local dev)
+        print("SKIP_EMAIL is enabled — skipping sending email")
+        return
     if recipients is None:
         if not MY_EMAIL:
             raise ValueError("MY_EMAIL environment variable is not set")

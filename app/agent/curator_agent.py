@@ -62,12 +62,38 @@ Preferences:
     def rank_digests(self, digests: List[dict]) -> List[RankedArticle]:
         if not digests:
             return []
-        
+
+        # If SKIP_OPENAI is enabled, perform a simple heuristic ranking locally
+        if getattr(self, "skip_openai", False) or self.client is None:
+            # Heuristic: score by number of interest keyword matches in title+summary
+            interests = [i.lower() for i in self.user_profile.get("interests", [])]
+
+            scored = []
+            for d in digests:
+                text = f"{d.get('title','')} {d.get('summary','')}".lower()
+                hits = sum(text.count(interest) for interest in interests) if interests else 0
+                # Base score: 5.0, add 2.0 per hit, plus small boost for longer summaries
+                score = min(10.0, 5.0 + hits * 2.0 + min(len(d.get('summary','') or '') / 500.0, 3.0))
+                scored.append((d, score))
+
+            scored.sort(key=lambda x: x[1], reverse=True)
+
+            ranked = []
+            for idx, (d, score) in enumerate(scored):
+                ranked.append(RankedArticle(
+                    digest_id=d['id'],
+                    relevance_score=round(score, 2),
+                    rank=idx + 1,
+                    reasoning="Heuristic ranking based on interest keyword matches",
+                ))
+
+            return ranked
+
         digest_list = "\n\n".join([
             f"ID: {d['id']}\nTitle: {d['title']}\nSummary: {d['summary']}\nType: {d['article_type']}"
             for d in digests
         ])
-        
+
         user_prompt = f"""Rank these {len(digests)} AI news digests based on the user profile:
 
 {digest_list}

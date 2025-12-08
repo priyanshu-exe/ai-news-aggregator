@@ -83,6 +83,22 @@ Top 10 ranked articles:
 
 Generate a greeting and introduction that previews these articles."""
 
+        # If OpenAI calls are skipped, generate a simple fallback introduction locally
+        if getattr(self, "skip_openai", False) or self.client is None:
+            def _get_attr(obj, name, default=""):
+                if isinstance(obj, dict):
+                    return obj.get(name, default)
+                try:
+                    return getattr(obj, name)
+                except Exception:
+                    return default
+
+            titles = ", ".join([_get_attr(a, 'title', '') for a in ranked_articles[:3]])
+            current_date = datetime.now().strftime('%B %d, %Y')
+            greeting = f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {current_date}."
+            intro_text = f"Top articles today include: {titles}."
+            return EmailIntroduction(greeting=greeting, introduction=intro_text)
+
         try:
             response = self.client.responses.parse(
                 model=self.model,

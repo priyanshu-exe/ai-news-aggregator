@@ -87,10 +87,16 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
 
         send_email(subject=subject, body_text=markdown_content, body_html=html_content)
 
-        digest_ids = [article.digest_id for article in result.articles]
-        marked_count = repo.mark_digests_as_sent(digest_ids)
+        # Only mark digests as sent if SKIP_EMAIL is not enabled (i.e. actual send attempted)
+        from app.services.email import SKIP_EMAIL as _SKIP_EMAIL
 
-        logger.info(f"Email sent successfully! Marked {marked_count} digests as sent.")
+        digest_ids = [article.digest_id for article in result.articles]
+        if _SKIP_EMAIL:
+            logger.info("SKIP_EMAIL is enabled — not marking digests as sent.")
+            marked_count = 0
+        else:
+            marked_count = repo.mark_digests_as_sent(digest_ids)
+            logger.info(f"Email sent successfully! Marked {marked_count} digests as sent.")
         return {
             "success": True,
             "subject": subject,

@@ -25,6 +25,18 @@ class DigestAgent(BaseAgent):
         self.system_prompt = PROMPT
 
     def generate_digest(self, title: str, content: str, article_type: str) -> Optional[DigestOutput]:
+        # If SKIP_OPENAI is enabled, produce a simple fallback digest instead
+        # of calling the OpenAI API. This avoids failures when API access is
+        # unavailable (quota, missing key, etc.).
+        if getattr(self, "skip_openai", False) or self.client is None:
+            # Fallback: create a short summary from the content and a draft title
+            draft_title = f"Digest: {title[:60]}"
+            draft_summary = (content or "").strip()
+            if len(draft_summary) > 400:
+                draft_summary = draft_summary[:397].rsplit(" ", 1)[0] + "..."
+
+            return DigestOutput(title=draft_title, summary=draft_summary)
+
         try:
             user_prompt = f"Create a digest for this {article_type}: \n Title: {title} \n Content: {content[:8000]}"
 
