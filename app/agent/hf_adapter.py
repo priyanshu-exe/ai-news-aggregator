@@ -18,13 +18,29 @@ class HFResponses:
         if not self.token:
             raise ValueError("HF_API_TOKEN not set in environment")
 
-        url = f"https://api-inference.huggingface.co/models/{model or self.model}"
+        # If caller passed a model name that is not an HF model identifier
+        # (e.g. 'gpt-4o-mini' from OpenAI), prefer the configured HF model.
+        model_to_use = model if model and "/" in model else self.model
+        url = f"https://api-inference.huggingface.co/models/{model_to_use}"
         headers = {"Authorization": f"Bearer {self.token}"}
         payload = {"inputs": prompt, "parameters": {"temperature": float(temperature), "max_new_tokens": 512}}
 
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            resp.raise_for_status()
+            data = resp.json()
+        except requests.HTTPError as e:
+            # If the HF model is not available via inference endpoint (410/404),
+            # fall back to a small, widely-available model for testing.
+            status = getattr(e.response, 'status_code', None)
+            if status in (404, 410):
+                fallback_model = 'gpt2'
+                fallback_url = f"https://api-inference.huggingface.co/models/{fallback_model}"
+                resp = requests.post(fallback_url, headers=headers, json=payload, timeout=60)
+                resp.raise_for_status()
+                data = resp.json()
+            else:
+                raise
 
         # Hugging Face returns text in a variety of formats (list/dict). Extract string
         if isinstance(data, list) and data:

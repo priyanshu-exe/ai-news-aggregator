@@ -50,6 +50,12 @@ class DigestAgent(BaseAgent):
             
             return response.output_parsed
         except Exception as e:
-            print(f"Error generating digest: {e}")
-            return None
+            # On any LLM error, fall back to a simple local digest so pipeline can continue
+            print(f"Error generating digest (LLM): {e} — falling back to local summary")
+            draft_title = f"Digest: {title[:60]}"
+            draft_summary = (content or "").strip()
+            if len(draft_summary) > 400:
+                draft_summary = draft_summary[:397].rsplit(" ", 1)[0] + "..."
+
+            return DigestOutput(title=draft_title, summary=draft_summary)
 

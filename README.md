@@ -178,6 +178,26 @@ class CustomScraper:
    # Get credentials from https://www.webshare.io/
    WEBSHARE_USERNAME=your_username
    WEBSHARE_PASSWORD=your_password
+
+### Using Hugging Face as the LLM provider
+
+- Sign up / login to Hugging Face and create an access token: https://huggingface.co/settings/tokens
+- In your `.env` set:
+   - `LLM_PROVIDER=hf`
+   - `HF_API_TOKEN=<your_token>`
+   - Optional: `HF_MODEL=<model-identifier>` (example: `google/flan-t5-large`, or a Llama/Falcon chat model)
+
+- Example `.env` entries:
+
+```
+LLM_PROVIDER=hf
+HF_API_TOKEN=hf_xxxYourTokenHere
+HF_MODEL=google/flan-t5-large
+```
+
+Notes:
+- The Hugging Face Inference API free tier allows testing but may have usage limits; choose a model appropriate for your quota and latency needs.
+- Some models return plain text; for better structure you can prompt them to return JSON and update `app/agent/hf_adapter.py` to parse JSON.
    ```
    
    **Note**: Webshare proxy is optional. If not provided, YouTube transcript fetching will work without a proxy but may be rate-limited.

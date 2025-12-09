@@ -112,5 +112,26 @@ Provide a relevance score (0.0-10.0) and rank (1-{len(digests)}) for each articl
             ranked_list = response.output_parsed
             return ranked_list.articles if ranked_list else []
         except Exception as e:
-            print(f"Error ranking digests: {e}")
-            return []
+            print(f"Error ranking digests (LLM): {e} — falling back to heuristic ranking")
+            # Fallback to the local heuristic used above
+            interests = [i.lower() for i in self.user_profile.get("interests", [])]
+
+            scored = []
+            for d in digests:
+                text = f"{d.get('title','')} {d.get('summary','')}'.lower()"
+                hits = sum(text.count(interest) for interest in interests) if interests else 0
+                score = min(10.0, 5.0 + hits * 2.0 + min(len(d.get('summary','') or '') / 500.0, 3.0))
+                scored.append((d, score))
+
+            scored.sort(key=lambda x: x[1], reverse=True)
+
+            ranked = []
+            for idx, (d, score) in enumerate(scored):
+                ranked.append(RankedArticle(
+                    digest_id=d['id'],
+                    relevance_score=round(score, 2),
+                    rank=idx + 1,
+                    reasoning="Heuristic ranking based on interest keyword matches",
+                ))
+
+            return ranked
