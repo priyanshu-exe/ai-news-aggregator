@@ -71,7 +71,7 @@ The `run_daily_pipeline()` function orchestrates all steps:
 ## Project Structure
 
 ```
-ai-news-aggregator-deployment-final/
+ai-news-aggregator/
 ├── app/                           # Main application package
 │   ├── agent/                     # LLM agents for processing
 │   │   ├── base.py               # Base agent class
@@ -188,7 +188,7 @@ class CustomScraper:
 ### 2. Clone the Repository
 ```powershell
 git clone <repo-url>
-cd ai-news-aggregator-deployment-final
+cd ai-news-aggregator
 ```
 
 ### 3. Create and Activate Virtual Environment
