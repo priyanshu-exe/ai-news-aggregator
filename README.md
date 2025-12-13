@@ -71,34 +71,62 @@ The `run_daily_pipeline()` function orchestrates all steps:
 ## Project Structure
 
 ```
-app/
-├── agent/              # LLM agents for processing
-│   ├── base.py        # Base agent class
-│   ├── curator_agent.py   # Article ranking
-│   ├── digest_agent.py    # Summary generation
-│   └── email_agent.py     # Email content generation
-├── config.py          # Configuration (YouTube channels)
-├── database/          # Database layer
-│   ├── models.py      # SQLAlchemy models
-│   ├── repository.py # Data access layer
-│   └── connection.py  # DB connection & environment
-├── profiles/          # User profile configuration
-│   └── user_profile.py
-├── scrapers/          # Content scrapers
-│   ├── base.py        # Base scraper for RSS feeds
-│   ├── anthropic.py   # Anthropic RSS scraper
-│   ├── openai.py      # OpenAI RSS scraper
-│   └── youtube.py     # YouTube channel scraper
-├── services/          # Processing services
-│   ├── base.py        # Base process service
-│   ├── process_anthropic.py
-│   ├── process_youtube.py
-│   ├── process_digest.py
-│   ├── process_curator.py
-│   ├── process_email.py
-│   └── email.py       # Email sending
-├── daily_runner.py    # Main pipeline orchestrator
-└── runner.py          # Scraper registry & execution
+ai-news-aggregator-deployment-final/
+├── app/                           # Main application package
+│   ├── agent/                     # LLM agents for processing
+│   │   ├── base.py               # Base agent class
+│   │   ├── curator_agent.py       # Article ranking & curation
+│   │   ├── digest_agent.py        # Summary generation
+│   │   ├── email_agent.py         # Email content generation
+│   │   ├── hf_adapter.py          # Hugging Face Inference API adapter
+│   │   └── __init__.py
+│   ├── database/                  # Database layer
+│   │   ├── models.py              # SQLAlchemy models (YouTubeVideo, Article)
+│   │   ├── repository.py          # Data access layer
+│   │   ├── connection.py          # DB connection & environment config
+│   │   ├── create_tables.py       # Database initialization
+│   │   ├── check_connection.py    # Connection verification
+│   │   ├── README.md
+│   │   └── __init__.py
+│   ├── profiles/                  # User profile configuration
+│   │   ├── user_profile.py        # User interests & preferences
+│   │   └── __init__.py
+│   ├── scrapers/                  # Content scrapers
+│   │   ├── base.py                # Base scraper for RSS feeds
+│   │   ├── anthropic.py           # Anthropic RSS scraper
+│   │   ├── openai.py              # OpenAI RSS scraper
+│   │   ├── youtube.py             # YouTube channel scraper
+│   │   └── __init__.py
+│   ├── services/                  # Processing services
+│   │   ├── base.py                # Base process service
+│   │   ├── process_anthropic.py   # Markdown conversion for Anthropic articles
+│   │   ├── process_youtube.py     # Transcript fetching for YouTube videos
+│   │   ├── process_digest.py      # Digest creation from articles
+│   │   ├── process_curator.py     # Ranking & curation of digests
+│   │   ├── process_email.py       # Email digest generation & sending
+│   │   ├── email.py               # SMTP email sending (Gmail)
+│   │   └── __init__.py
+│   ├── config.py                  # Configuration (YouTube channels, settings)
+│   ├── runner.py                  # Scraper registry & execution
+│   ├── daily_runner.py            # Main pipeline orchestrator
+│   ├── __init__.py
+│   └── example.env                # Example environment variables
+├── scripts/                       # Utility scripts
+│   ├── db_inspect.py              # Inspect database contents
+│   ├── check_unsent.py            # Check unsent digests
+│   ├── unmark_recent_digests.py   # Reset sent flags for re-sending
+│   ├── test_smtp.py               # SMTP connection test
+│   └── test_hf_digest.py          # Test Hugging Face adapter
+├── docker/                        # Docker configuration
+│   └── docker-compose.yml         # PostgreSQL service definition
+├── docs/                          # Documentation
+│   ├── DEPLOYMENT.md
+│   └── RENDER_SETUP.md
+├── main.py                        # Entry point (runs daily pipeline)
+├── pyproject.toml                 # Project metadata & dependencies
+├── requirements.txt               # pip dependencies (mirrors pyproject.toml)
+├── Dockerfile                     # Container image definition
+└── render.yaml                    # Render deployment config
 ```
 
 ## Adding New Scrapers
@@ -150,34 +178,85 @@ class CustomScraper:
 
 ## Setup
 
-### Prerequisites
+### 1. Prerequisites
+- **Python 3.12+** (recommended: install from python.org)
+- **Docker Desktop** (for running PostgreSQL)
+- **Git** (to clone the repository)
+- **Gmail app password** (for email sending)
+- **Webshare proxy credentials** (optional, for YouTube transcript fetching)
 
-- Python 3.12+
-- PostgreSQL database
-- OpenAI API key
-- Gmail app password (for email sending)
-- Webshare proxy credentials (optional, for YouTube transcript fetching)
+### 2. Clone the Repository
+```powershell
+git clone <repo-url>
+cd ai-news-aggregator-deployment-final
+```
 
-### Installation
+### 3. Create and Activate Virtual Environment
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
+### 4. Install Dependencies
+```powershell
+pip install -r requirements.txt
+```
 
-3. Configure environment variables (copy `app/example.env` to `.env`):
-   ```bash
-   OPENAI_API_KEY=your_key
-   MY_EMAIL=your_email@gmail.com
-   APP_PASSWORD=your_gmail_app_password
-   DATABASE_URL=postgresql://user:pass@host:port/db
-   ENVIRONMENT=LOCAL  # Optional: auto-detected from DATABASE_URL if contains "render.com"
-   
+### 5. Set Up Environment Variables
+- Copy `.env.example` to `.env` and fill in your values:
+  - `DATABASE_URL` (default: postgresql://postgres:<password>@127.0.0.1:5433/ai_news_aggregator)
+  - `MY_EMAIL` (your Gmail address)
+  - `APP_PASSWORD` (Gmail app password)
+  - `OPENAI_API_KEY` or `HF_API_TOKEN` (for LLM, optional)
+
    # Optional: Webshare Proxy (for YouTube transcript fetching)
    # Get credentials from https://www.webshare.io/
    WEBSHARE_USERNAME=your_username
    WEBSHARE_PASSWORD=your_password
+
+- Example:
+```powershell
+copy .env.example .env
+# Edit .env in your editor
+```
+
+### 6. Start PostgreSQL Database (Docker)
+```powershell
+docker compose -f docker\docker-compose.yml up -d
+```
+- This will start a Postgres 17 container on port 5433 with persistent storage.
+
+### 7. Initialize Database Tables
+- The pipeline will auto-create tables on first run, but you can run:
+```powershell
+.venv\Scripts\python.exe app\database\create_tables.py
+```
+
+### 8. Configure YouTube channels in `app/config.py`
+
+### 9. Update user profile in `app/profiles/user_profile.py`
+
+### 10. Run the Pipeline
+```powershell
+.venv\Scripts\python.exe main.py 24 10
+```
+- This scrapes sources, processes articles, creates digests, and sends the daily email.
+
+### 11. Troubleshooting
+- If you see DB connection errors, ensure Docker is running and the container is healthy.
+- For email errors, check your Gmail app password and `MY_EMAIL` in `.env`.
+- For LLM errors, check your API key/token and model access.
+
+### 12. Optional: Inspect Database
+```powershell
+.venv\Scripts\python.exe scripts\db_inspect.py
+```
+- Shows sample articles and digests in the database.
+
+---
+
+For more details, see the comments in each script and the architecture section above.
+
 
 ### Using Hugging Face as the LLM provider
 
@@ -202,43 +281,6 @@ Notes:
    
    **Note**: Webshare proxy is optional. If not provided, YouTube transcript fetching will work without a proxy but may be rate-limited.
 
-4. Initialize database:
-   ```bash
-   uv run python -m app.database.create_tables
-   ```
-   
-   Or check database connection:
-   ```bash
-   uv run python -m app.database.check_connection
-   ```
-
-5. Configure YouTube channels in `app/config.py`
-
-6. Update user profile in `app/profiles/user_profile.py`
-
-### Running
-
-**Full pipeline:**
-```bash
-uv run main.py
-```
-
-**Individual steps:**
-```bash
-# Scraping
-uv run python -m app.runner
-
-# Processing
-uv run python -m app.services.process_anthropic
-uv run python -m app.services.process_youtube
-uv run python -m app.services.process_digest
-
-# Curation
-uv run python -m app.services.process_curator
-
-# Email
-uv run python -m app.services.process_email
-```
 
 ## Deployment
 
@@ -279,7 +321,3 @@ docker run --env-file .env ai-news-aggregator
 - **feedparser**: RSS parsing
 - **youtube-transcript-api**: Video transcripts
 - **UV**: Package management
-
-## License
-
-MIT
