@@ -14,6 +14,7 @@ This project aggregates AI news from multiple sources:
 ## Architecture
 
 ```mermaid
+%%{init: {'themeVariables': { 'textColor': '#000000' }} }%%
 graph LR
     A[Sources<br/>YouTube<br/>RSS Feeds] --> B[Scrapers<br/>BaseScraper<br/>Registry Pattern]
     B --> C[(Database<br/>PostgreSQL)]
@@ -23,13 +24,13 @@ graph LR
     E --> F[Email<br/>Personalized Digest]
     F --> G[Delivery<br/>Gmail SMTP]
     
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
-    style D fill:#fff4e1
-    style E fill:#f3e5f5
-    style F fill:#f3e5f5
-    style G fill:#ffe1f5
+    style A fill:#e1f5ff,color:#000000
+    style B fill:#fff4e1,color:#000000
+    style C fill:#e8f5e9,stroke:#4caf50,stroke-width:3px,color:#000000
+    style D fill:#fff4e1,color:#000000
+    style E fill:#f3e5f5,color:#000000
+    style F fill:#f3e5f5,color:#000000
+    style G fill:#ffe1f5,color:#000000
 ```
 
 ## How It Works
